@@ -1,0 +1,39 @@
+# The live demo's manifest (see demo/deploy.mjs). The same app with three changes: every page is
+# public (each listed, so the platform's own routes stay its own), every write from a page passes
+# a challenge (not the API: scripts can't solve one, and it needs a key the guest makes in
+# Settings), and DEMO=1 turns on the guest button, keeps email and webhooks inside the app, and
+# adds the nightly reset.
+whisk: 1
+name: proposals
+
+customer_identity: none
+
+routes:
+  public: ["/", "/health", "/assets/**", "/p/**", "/demo/**", "/proposals/**", "/sections/**", "/templates", "/templates/**", "/prices", "/prices/**", "/settings", "/settings/**", "/export.csv", "/api/**"]
+  challenge: ["/demo/**", "/p/**", "/proposals/**", "/sections/**", "/templates/**", "/prices", "/prices/**", "/settings", "/settings/**"]
+
+health:
+  path: /health
+  timeout: 60
+
+database: app
+migrate: "node dist/migrate.js"
+
+storage: true
+email: true
+
+functions:
+  - name: send-email
+    event: email.send
+    graph: workflows/send-email.graph.yaml
+  - name: deliver-webhook
+    event: webhook.deliver
+    graph: workflows/deliver-webhook.graph.yaml
+  - name: demo-reset
+    cron: "0 3 * * *"
+    tz: America/New_York
+    graph: workflows/demo-reset.graph.yaml
+
+env:
+  LOG_LEVEL: info
+  DEMO: "1"
